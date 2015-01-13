@@ -1,0 +1,47 @@
+#!/usr/bin/env ruby
+require 'erubis'
+
+def check_environment_variable(variable, value_from_arguments=nil, default=nil)
+  ENV[variable] = value_from_arguments if value_from_arguments
+  unless ENV[variable]
+  	print("WARNING: #{variable} is not specified. ")
+    if default
+      print("#{default} will be used as a default.")
+      ENV[variable] = default
+    else
+      return false
+    end
+    puts
+  end
+  true
+end
+
+unless File.exist?("/root/.ssh/bosh.pem")
+  puts("ERROR: Can't find ~/.ssh/bosh.pem file.")
+  puts("       Try to run :")
+  puts("       $ cat ~/.ssh/amazon-key.pem | docker run allomov/terraform:aws-cf-install sh -c 'cat > /root/.ssh/bosh.pem'")
+  puts("       $ docker commit $(docker ps -l -q) cf-aws-install")
+  puts("       $ docker run cf-aws-install")
+  exit(1)
+end
+
+environment_variables = [ {name: "AWS_ACCESS_KEY", argument: ARGV[0]},
+                          {name: "AWS_SECRET_KEY", argument: ARGV[1]},
+                          {name: "AWS_KEY_NAME", argument: ARGV[2], default: "bosh"},
+                          {name: "AWS_REGION",   default: "us-east-1"}]
+validations = environment_variables.map { |var| check_environment_variable(var[:name], var[:argument], var[:default]) }
+
+unless validations.all?
+  puts("ERROR: AWS_ACCESS_KEY or AWS_SECRET_KEY environment variables are not specified.") 
+  puts("       Try to run with following command:")
+  puts("       $ docker run -e AWS_ACCESS_KEY=$AWS_ACCESS_KEY -e AWS_SECRET_KEY=$AWS_SECRET_KEY cf-aws-installer-image-name")
+  exit(1)
+end
+
+context = environment_variables.inject({}) { |hash, var| hash[var[:name].downcase] = ENV[var[:name]]; hash }
+template = Erubis::Eruby.new(File.read("/terraform-aws-cf-install/terraform.tfvars.erb"))
+File.write("/terraform-aws-cf-install/terraform.tfvars", template.result(context))
+
+Dir.chdir("/terraform-aws-cf-install")
+ok = system("make plan")
+ok = system("make apply")

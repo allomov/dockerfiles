@@ -1,0 +1,7 @@
+tmp
+.envrc
+.rvmrc
+.ruby-version
+.ruby-gemset
+*.pem
+
