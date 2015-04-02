@@ -7,18 +7,11 @@ RUN apt-get -y install git git-core curl gawk g++ gcc make libc6-dev libreadline
     libgdbm-dev libncurses5-dev automake libtool bison pkg-config libffi-dev
 
 RUN apt-get install -y postgresql postgresql-contrib postgresql-client libpq5 libpq-dev
-RUN curl -sSL https://rvm.io/mpapis.asc | gpg --import -  
 
-RUN curl -L https://get.rvm.io | bash -s stable 
+RUN wget http://ftp.ruby-lang.org/pub/ruby/ruby-2.1.5.tar.gz
+RUN tar -xzvf ruby-2.1.5.tar.gz
+RUN cd ruby-2.1.5 && ./configure && make && sudo make install
+RUN gem install bundler --no-ri --no-rdoc
 
-ENV PATH /usr/local/rvm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-RUN rvm install ruby-2.1.5   
-RUN rvm reload
-CMD source /etc/profile 
-CMD source /usr/local/rvm/scripts/rvm
 RUN apt-get install -y nodejs npm  
 RUN ln -s  /usr/bin/nodejs  /usr/bin/node 
-RUN ["/bin/bash", "-l", "-c", "rvm use 2.1.5 --default" ]
-RUN ["/bin/bash", "-l", "-c", "rvm requirements; gem install bundler --no-ri --no-rdoc"]
-RUN ["/bin/bash", "-l", "-c", "gem list"]
